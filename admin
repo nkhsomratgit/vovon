@@ -1,0 +1,672 @@
+// =====================================================
+// ASHIK VOVON — ADMIN PANEL JS
+// PART 1/2
+// =====================================================
+
+const loginPage = document.getElementById("loginPage");
+const dashboard = document.getElementById("dashboard");
+
+const loginForm = document.getElementById("loginForm");
+const loginMessage = document.getElementById("loginMessage");
+
+const logoutButton = document.getElementById("logoutButton");
+
+const songForm = document.getElementById("songForm");
+const photoForm = document.getElementById("photoForm");
+
+const songStatus = document.getElementById("songStatus");
+const photoStatus = document.getElementById("photoStatus");
+
+const songSubmit = document.getElementById("songSubmit");
+const photoSubmit = document.getElementById("photoSubmit");
+
+const totalSongs = document.getElementById("totalSongs");
+const totalPhotos = document.getElementById("totalPhotos");
+
+
+// =====================================================
+// SHOW DASHBOARD
+// =====================================================
+
+function showDashboard() {
+
+    loginPage.classList.add("hidden");
+
+    dashboard.classList.remove("hidden");
+
+    loadDashboard();
+
+}
+
+
+// =====================================================
+// SHOW LOGIN
+// =====================================================
+
+function showLogin() {
+
+    dashboard.classList.add("hidden");
+
+    loginPage.classList.remove("hidden");
+
+}
+
+
+// =====================================================
+// LOGIN
+// =====================================================
+
+loginForm.addEventListener("submit", async function (e) {
+
+    e.preventDefault();
+
+    loginMessage.textContent = "Login হচ্ছে...";
+
+    const username =
+        document.getElementById("username").value.trim();
+
+    const password =
+        document.getElementById("password").value;
+
+    try {
+
+        const response = await fetch("/api/login", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+
+            loginMessage.textContent = "";
+
+            showDashboard();
+
+        } else {
+
+            loginMessage.textContent =
+                data.message || "Login ব্যর্থ হয়েছে";
+
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        loginMessage.textContent =
+            "Server-এর সাথে যোগাযোগ করা যাচ্ছে না।";
+
+    }
+
+});
+
+
+// =====================================================
+// LOGOUT
+// =====================================================
+
+logoutButton.addEventListener("click", async function () {
+
+    try {
+
+        await fetch("/api/logout", {
+            method: "POST"
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+    }
+
+    showLogin();
+
+});
+
+
+// =====================================================
+// LOAD DASHBOARD
+// =====================================================
+
+async function loadDashboard() {
+
+    await loadSongs();
+
+    await loadPhotos();
+
+}
+
+
+// =====================================================
+// LOAD SONGS
+// =====================================================
+
+async function loadSongs() {
+
+    try {
+
+        const response =
+            await fetch("/api/songs");
+
+        if (!response.ok) {
+
+            if (response.status === 401) {
+                showLogin();
+            }
+
+            return;
+
+        }
+
+        const songs =
+            await response.json();
+
+        totalSongs.textContent =
+            songs.length;
+
+        renderSongs(songs);
+
+    } catch (error) {
+
+        console.error(
+            "Songs loading error:",
+            error
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// LOAD PHOTOS
+// =====================================================
+
+async function loadPhotos() {
+
+    try {
+
+        const response =
+            await fetch("/api/photos");
+
+        if (!response.ok) {
+
+            if (response.status === 401) {
+                showLogin();
+            }
+
+            return;
+
+        }
+
+        const photos =
+            await response.json();
+
+        totalPhotos.textContent =
+            photos.length;
+
+        renderPhotos(photos);
+
+    } catch (error) {
+
+        console.error(
+            "Photos loading error:",
+            error
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// RENDER SONGS
+// =====================================================
+
+function renderSongs(songs) {
+
+    const container =
+        document.getElementById("songList");
+
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    if (!songs.length) {
+
+        container.innerHTML = `
+            <div class="empty">
+                এখনো কোনো গান যোগ করা হয়নি।
+            </div>
+        `;
+
+        return;
+    }
+
+    songs.forEach(song => {
+
+        const item =
+            document.createElement("div");
+
+        item.className = "item";
+
+        item.innerHTML = `
+
+            <div class="item-thumb">
+
+                ${
+                    song.cover
+                    ? `<img
+                        src="${song.cover}"
+                        alt=""
+                    >`
+                    : "♪"
+                }
+
+            </div>
+
+            <div class="item-info">
+
+                <strong>
+                    ${escapeHTML(song.title)}
+                </strong>
+
+                <span>
+                    ${escapeHTML(
+                        song.artist || "আশিক ভবন"
+                    )}
+                </span>
+
+            </div>
+
+            <button
+                class="delete-button"
+                onclick="deleteSong(${song.id})"
+            >
+                🗑️ Remove
+            </button>
+
+        `;
+
+        container.appendChild(item);
+
+    });
+
+}
+
+
+// =====================================================
+// RENDER PHOTOS
+// =====================================================
+
+function renderPhotos(photos) {
+
+    const container =
+        document.getElementById("photoList");
+
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    if (!photos.length) {
+
+        container.innerHTML = `
+            <div class="empty">
+                এখনো কোনো ছবি যোগ করা হয়নি।
+            </div>
+        `;
+
+        return;
+    }
+
+    photos.forEach(photo => {
+
+        const item =
+            document.createElement("div");
+
+        item.className = "item";
+
+        item.innerHTML = `
+
+            <div class="item-thumb">
+
+                <img
+                    src="${photo.image}"
+                    alt=""
+                >
+
+            </div>
+
+            <div class="item-info">
+
+                <strong>
+                    ${escapeHTML(
+                        photo.title || "আশিক ভবন"
+                    )}
+                </strong>
+
+                <span>
+                    Gallery Photo
+                </span>
+
+            </div>
+
+            <button
+                class="delete-button"
+                onclick="deletePhoto(${photo.id})"
+            >
+                🗑️ Remove
+            </button>
+
+        `;
+
+        container.appendChild(item);
+
+    });
+
+}
+
+
+// =====================================================
+// HTML SAFE TEXT
+// =====================================================
+
+function escapeHTML(value) {
+
+    const div =
+        document.createElement("div");
+
+    div.textContent =
+        value == null ? "" : value;
+
+    return div.innerHTML;
+
+}// =====================================================
+// ASHIK VOVON — ADMIN PANEL JS
+// PART 2/2
+// =====================================================
+
+
+// =====================================================
+// ADD SONG
+// =====================================================
+
+songForm.addEventListener("submit", async function (e) {
+
+    e.preventDefault();
+
+    songStatus.textContent = "গান আপলোড হচ্ছে...";
+    songSubmit.disabled = true;
+
+    try {
+
+        const formData =
+            new FormData(songForm);
+
+        const response =
+            await fetch("/api/songs", {
+                method: "POST",
+                body: formData
+            });
+
+        const data =
+            await response.json();
+
+        if (!response.ok || !data.success) {
+
+            throw new Error(
+                data.message || "গান আপলোড হয়নি"
+            );
+
+        }
+
+        songStatus.textContent =
+            "✅ গান সফলভাবে যোগ হয়েছে!";
+
+        songForm.reset();
+
+        const artistInput =
+            songForm.querySelector(
+                '[name="artist"]'
+            );
+
+        if (artistInput) {
+            artistInput.value = "আশিক ভবন";
+        }
+
+        await loadSongs();
+
+    } catch (error) {
+
+        console.error(error);
+
+        songStatus.textContent =
+            "❌ " + error.message;
+
+    } finally {
+
+        songSubmit.disabled = false;
+
+    }
+
+});
+
+
+// =====================================================
+// ADD PHOTO
+// =====================================================
+
+photoForm.addEventListener("submit", async function (e) {
+
+    e.preventDefault();
+
+    photoStatus.textContent =
+        "ছবি আপলোড হচ্ছে...";
+
+    photoSubmit.disabled = true;
+
+    try {
+
+        const formData =
+            new FormData(photoForm);
+
+        const response =
+            await fetch("/api/photos", {
+                method: "POST",
+                body: formData
+            });
+
+        const data =
+            await response.json();
+
+        if (!response.ok || !data.success) {
+
+            throw new Error(
+                data.message || "ছবি আপলোড হয়নি"
+            );
+
+        }
+
+        photoStatus.textContent =
+            "✅ ছবি সফলভাবে যোগ হয়েছে!";
+
+        photoForm.reset();
+
+        await loadPhotos();
+
+    } catch (error) {
+
+        console.error(error);
+
+        photoStatus.textContent =
+            "❌ " + error.message;
+
+    } finally {
+
+        photoSubmit.disabled = false;
+
+    }
+
+});
+
+
+// =====================================================
+// DELETE SONG
+// =====================================================
+
+async function deleteSong(id) {
+
+    const confirmDelete =
+        confirm(
+            "এই গানটি কি সত্যিই Remove করতে চান?"
+        );
+
+    if (!confirmDelete) return;
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/songs/" + id,
+                {
+                    method: "DELETE"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (!response.ok || !data.success) {
+
+            throw new Error(
+                data.message ||
+                "গান Remove করা যায়নি"
+            );
+
+        }
+
+        await loadSongs();
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "❌ " + error.message
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// DELETE PHOTO
+// =====================================================
+
+async function deletePhoto(id) {
+
+    const confirmDelete =
+        confirm(
+            "এই ছবিটি কি সত্যিই Remove করতে চান?"
+        );
+
+    if (!confirmDelete) return;
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/photos/" + id,
+                {
+                    method: "DELETE"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (!response.ok || !data.success) {
+
+            throw new Error(
+                data.message ||
+                "ছবি Remove করা যায়নি"
+            );
+
+        }
+
+        await loadPhotos();
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "❌ " + error.message
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// CHECK LOGIN
+// =====================================================
+
+async function checkLogin() {
+
+    try {
+
+        const response =
+            await fetch("/api/songs");
+
+        if (response.status === 401) {
+
+            showLogin();
+
+            return;
+
+        }
+
+        if (response.ok) {
+
+            showDashboard();
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Connection error:",
+            error
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// START ADMIN PANEL
+// =====================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        checkLogin();
+
+    }
+);
